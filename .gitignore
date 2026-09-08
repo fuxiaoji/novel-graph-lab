@@ -1,0 +1,13 @@
+__pycache__/
+data/
+outputs/
+dist/
+skill/novel-graph-lab/assets/
+_site/
+.venv/
+.pytest_cache/
+*.pyc
+*.tmp
+.env
+.env.*
+*.log

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Novel Graph Lab 小说图谱"
+  short_description: "将长篇小说转成证据图谱问答，生成可暂停、检索与回放的三维光点动画"
+  default_prompt: "使用 $novel-graph-lab 导入我的小说和问题，生成有原文引用的图谱问答与三维检索动画。"

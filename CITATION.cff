@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use Novel Graph Lab in your work, please cite this software."
+title: "Novel Graph Lab: Evidence-grounded novel graphs and retrieval replay"
+type: software
+authors:
+  - family-names: "fuxiaoji"
+version: 0.2.0
+date-released: 2026-09-08
+url: "https://github.com/fuxiaoji/novel-graph-lab"
+repository-code: "https://github.com/fuxiaoji/novel-graph-lab"
+license: MIT
