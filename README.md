@@ -6,7 +6,7 @@
 
 <p align="center">A local workspace for turning long novels into evidence-grounded knowledge graphs,<br>asking questions, and replaying retrieval through an interactive 3D graph.</p>
 
-<p align="center"><a href="https://fuxiaoji.github.io/novel-graph-lab/">Interactive demo</a> · <a href="#quick-start">Quick start</a> · <a href="README.zh-CN.md">中文说明</a> · <a href="https://github.com/fuxiaoji/novel-graph-lab/releases">Downloads</a></p>
+<p align="center"><a href="https://fuxiaoji.github.io/novel-graph-lab/">Interactive demo</a> · <a href="#quick-start">Quick start</a> · <a href="README.zh-CN.md">中文说明</a> · <a href="README.ja.md">日本語</a> · <a href="README.es.md">Español</a> · <a href="https://github.com/fuxiaoji/novel-graph-lab/releases">Downloads</a></p>
 
 <p align="center">
 <img src="https://img.shields.io/badge/Python-3.10%2B-536b83" alt="Python 3.10 or newer">

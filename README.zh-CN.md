@@ -4,7 +4,7 @@
 
 将长篇小说转成可复用的知识图谱，带着问题检索原文，再通过三维动画回放证据路径。
 
-[在线交互 Demo](https://fuxiaoji.github.io/novel-graph-lab/) · [English](README.md) · [下载项目与 Skill](https://github.com/fuxiaoji/novel-graph-lab/releases)
+[在线交互 Demo](https://fuxiaoji.github.io/novel-graph-lab/) · [English](README.md) · [日本語](README.ja.md) · [Español](README.es.md) · [下载项目与 Skill](https://github.com/fuxiaoji/novel-graph-lab/releases)
 
 [![完整小说图谱和原文证据](docs/images/overview.png)](https://fuxiaoji.github.io/novel-graph-lab/)
 
