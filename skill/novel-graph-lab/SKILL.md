@@ -9,12 +9,16 @@ description: 将完整小说和问题转为有原文证据的知识图谱问答�
 
 使用配套项目把小说分块建图、检索、回答，再生成可交互的三维证据动画。先通过 `scripts/launch.py --print-project` 定位项目；项目缺失时按 `references/project.md` 的可搬迁模板恢复。项目只依赖 Python 3.10+ 标准库。
 
-## 交付路径
+## 新内核与交付路径
 
-- 用户要直接操作：运行 `python scripts/launch.py --open`，在网页导入 TXT/Markdown、问题、Base URL、模型 ID 和 Key。优先使用这个入口接收密钥，避免要求用户把 Key 发进聊天。
-- 用户已提供小说路径、问题和 API 配置：用项目 `cli.py --novel <path> --question <question> --base-url <url> --model <id> --out <output>`。密钥读取环境变量 `NOVEL_API_KEY`，不出现在命令参数。已有授权配置可以直接使用，不重复索取。
-- 用户只想看原 Demo：打开项目 `outputs/NovelGraph-Demo.html`，包含原图谱和 7 个历史问答，不需要调用 API。
-- 已有 `graph.json`：用 `cli.py --graph <path> --question ...`，复用原图谱。已完成建图在回答前单独保存；回答失败可以继续，不必重建。
+使用 `kernel_build.py` 的双遍流程：逐字情节证据筛选 → v4 关系优先建图 → 有证据的人物归并 → 质量检查。默认 1500 字符 / 100 重叠，保留完整原文。不要恢复早期两轮扩散内核。方法来源和移植差异见配套项目 `docs/kernel.md`。
+
+- 网页入口：`python scripts/launch.py --open`。导入完整 TXT/Markdown、问题、Base URL、模型 ID 与 Key。
+- 已有完整参数：项目 `cli.py --novel <path> --question <question> --method agm_s|agm_r|agm_d|walk --out <output>`；密钥读取 `NOVEL_API_KEY`。图谱可通过 `--graph` 复用。
+- AGM-S 是三路证据扩展；AGM-R 是图谱候选重排；AGM-D 独立运行两路并对分歧仲裁；walk 逐节点读取、逐次选真实邻接边。不要将 walk 的动作说明称为私有思维链。
+- S/R/D 优先使用本机 Ollama 的 BGE-M3，`--dense-mode required` 要求向量服务可用。自动降级必须保留警告，不冒充原三路实验配置。walk 不依赖向量。
+- 新 Demo 使用完整《蓝宝石案》，3 问 × 4 方法的真实 GLM 记录。重新生成用 `tools/run_demo.py`；核对 `manifest.json`，不得以旧 Dashboard 图和旧回答替代新建图运行。
+- 先保存图谱再回答；失败保留缓存与错误，不用模拟回答补齐实录。
 
 ## 可追溯性
 
@@ -22,7 +26,7 @@ description: 将完整小说和问题转为有原文证据的知识图谱问答�
 
 新建图的节点和关系引文必须逐字存在于相应文本块，保留完整原文和字符偏移。不要为了图更密集而补造关系，不把共同出现自动称作因果。别名歧义、证词冲突和时间变化保留为不确定性。发现无效引用或没有引用时，在结果中明确标记。
 
-原始 Dashboard 的历史记录缺少完整小说、查询规划与逐次遍历日志。原图坐标和保存的问答可直接回放；连接动画是根据已存节点和真实边重建的示意，必须保留历史标识。不能补造缺失步骤或把历史模式冒充新 API 运行。
+早期 Dashboard 历史记录与新 Demo 必须区分。公开默认示例为新内核实录；如用户另外导入历史记录，保留历史标识，不补造缺失步骤。研究报告中的 G7/G9/G10 正确率不是本移植版或 GLM 的准确率。
 
 ## 输出与验证
 

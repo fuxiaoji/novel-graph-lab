@@ -40,10 +40,10 @@ class HTTPTests(unittest.TestCase):
                         time.sleep(.02)
                     self.assertEqual(result['status'], 'complete', result.get('error'))
                     return result
-                result = run(dict(config=config, text=TEXT, title='HTTP小说', question='苏禾怎么离开？'))
+                result = run(dict(config=config, dense_mode='off', text=TEXT, title='HTTP小说', question='苏禾怎么离开？'))
                 self.assertEqual(result['result']['usage']['calls'], 3)
-                second = run(dict(config=config, graph=result['graph'], question='苏禾用了什么工具？'))
-                self.assertEqual(second['result']['usage']['calls'], 2)
+                second = run(dict(config=config, dense_mode='off', graph=result['graph'], question='苏禾用了什么工具？'))
+                self.assertEqual(second['result']['usage']['calls'], 3)
                 export = post('/api/export', dict(session={'graph': result['graph'], 'results': [result['result']]}, format='html'))
                 with urllib.request.urlopen(base+export['url']) as r:
                     html = r.read().decode()

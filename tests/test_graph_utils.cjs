@@ -12,4 +12,4 @@ const p=forceLayout(g);assert.equal(p.size,3);for(const v of p.values())for(cons
 assert.deepEqual([...p],[...forceLayout(g)]);
 assert.equal(metrics({nodes:[],edges:[],passages:[]}).isolatedRate,0);
 console.log('Graph metrics: overlap, Unicode offsets, missing source, isolated nodes and force layout passed.');
-const demo=require('../examples/demo.json').graph;console.time('739-node force layout');const layout=forceLayout(demo);console.timeEnd('739-node force layout');assert.equal(layout.size,demo.nodes.length);console.log(JSON.stringify(metrics(demo)));
+const demo=require('../examples/demo.json').graph;console.time('Demo full-graph force layout');const layout=forceLayout(demo);console.timeEnd('Demo full-graph force layout');assert.equal(layout.size,demo.nodes.length);console.log(JSON.stringify(metrics(demo)));

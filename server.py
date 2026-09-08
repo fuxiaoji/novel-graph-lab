@@ -28,14 +28,14 @@ def run_job(job, payload):
         graph = payload.get('graph')
         if graph is None:
             graph = build(str(payload.get('text', '')), str(payload.get('title', '未命名小说')), api, ROOT/'data/cache', emit,
-                          lambda: job['cancel'], int(payload.get('chunk_size', 5000)))
+                          lambda: job['cancel'], int(payload.get('chunk_size', 1500)))
         else:
             validate_graph(graph)
         if job['cancel']:
             raise ValueError('任务已停止。')
         with LOCK:
             job['graph'] = graph
-        result = answer(graph, str(payload.get('question', '')), api, emit, lambda: job['cancel'])
+        result = answer(graph, str(payload.get('question', '')), api, emit, lambda: job['cancel'], payload.get('method', 'agm_s'), payload.get('dense_mode','auto'))
         if job['cancel']:
             raise ValueError('任务已停止。')
         with LOCK:

@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ['core.py', 'server.py', 'cli.py', 'start.cmd', 'README.md', 'README.zh-CN.md', 'QA.md', '.gitignore', 'LICENSE', 'NOTICE.md', 'CONTRIBUTING.md', 'SECURITY.md', 'CITATION.cff']
+FILES = ['kernel_build.py', 'kernel_retrieve.py', 'research_prompts.py', 'core.py', 'server.py', 'cli.py', 'start.cmd', 'README.md', 'README.zh-CN.md', 'QA.md', '.gitignore', 'LICENSE', 'NOTICE.md', 'CONTRIBUTING.md', 'SECURITY.md', 'CITATION.cff']
 DIRS = ['web', 'examples', 'tests', 'tools', 'docs', '.github']
 
 

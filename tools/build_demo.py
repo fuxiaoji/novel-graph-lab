@@ -1,4 +1,4 @@
-"""Build a static, API-free public demo from the checked-in historical session."""
+"""Build a static, API-free public demo from the checked-in live API session."""
 import argparse
 import json
 from pathlib import Path

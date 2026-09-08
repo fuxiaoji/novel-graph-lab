@@ -1,3 +1,18 @@
+# v0.3 verification
+
+The former v0.2 historical example is replaced with a new relation-centered graph and real multi-method answers. The earlier implementation record below is retained only as history.
+
+- 12 Python tests pass: source/line grounding, full text coverage, chunk caching, HTTP/export credential exclusion, mass-conserving graph propagation, real traversal edges, invalid-neighbor rejection, read/choose/read ordering, reranker-ID validation, disagreement referee and explicit BGE failure.
+- The full Blue Carbuncle story contains 42,115 Unicode characters. A real GLM-4.7 build used 63 successful API calls; all new node/edge source offsets were independently checked.
+- Resulting graph: 121 nodes, 169 edges, 8 isolated nodes (6.6%). Node evidence character-union coverage: 6,630 / 42,115 (15.7%). All 121 nodes have grounded source evidence. Coverage is not answer accuracy.
+- Early live integration exposed citation renumbering. The final kernel explicitly constrains IDs and includes one logged repair request. New answers are rerun with the corrected kernel; old pre-fix outputs are not the default demo.
+- The published `examples/demo-audit.json` records final per-method warnings, citations, node reads and real traversals. This is a structural audit, not a correctness score.
+- API request counts exclude failed/in-flight calls and prior debugging attempts. The run manifest reports successful calls represented by the final published artifacts.
+
+---
+
+## Historical v0.2 record
+
 # 验证记录
 
 v0.2 阅读界面更新：冷白底与墨蓝控件、原文阅读排版、统计横栏，移除装饰性透视地板和默认旋转。保留全图、子图筛选与节点证据功能，截图来自真实应用。公开 Demo 使用自包含静态 HTML，导入入口引导用户在本机运行，不显示密钥表单。Python 测试、图谱工具测试与脚本语法检查通过。

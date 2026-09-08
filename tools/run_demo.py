@@ -1,0 +1,68 @@
+"""Rebuild the published example using real APIs. Never fabricate a fallback."""
+import argparse
+import hashlib
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from core import API,build,answer
+from kernel_build import VERSION
+
+QUESTIONS=[
+    'Who actually stole the blue carbuncle, and what evidence shows that John Horner was framed?',
+    'Trace how the blue carbuncle travelled inside a goose from James Ryder to Peterson. Why did Ryder lose track of it?',
+    'What did Henry Baker know about the jewel, and how did Holmes test whether he was involved?',
+]
+
+
+def write(path,data):
+    path.parent.mkdir(parents=True,exist_ok=True)
+    temp=path.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False,indent=2),'utf-8');temp.replace(path)
+
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--model',default='glm-4.7')
+    parser.add_argument('--base-url',default='https://open.bigmodel.cn/api/coding/paas/v4')
+    parser.add_argument('--reuse-new-graph',action='store_true',help='Only reuse a v3 graph whose source hash matches this exact story')
+    parser.add_argument('--out',type=Path,default=ROOT/'outputs/v3')
+    args=parser.parse_args();args.out.mkdir(parents=True,exist_ok=True)
+    text=(ROOT/'examples/blue-carbuncle.txt').read_text('utf-8')
+    source_hash=hashlib.sha256(text.encode()).hexdigest()
+    api=API(dict(base_url=args.base_url,model=args.model,api_key=os.environ.get('NOVEL_API_KEY','')))
+    if not api.key: raise SystemExit('Set NOVEL_API_KEY in the process environment.')
+    def emit(kind,**data): print(data.get('label',kind),flush=True)
+    graph_path=args.out/'graph.json'
+    if args.reuse_new_graph and graph_path.exists():
+        graph=json.loads(graph_path.read_text('utf-8'))
+        if graph.get('version')!=VERSION or graph['meta'].get('source_sha256')!=source_hash:
+            raise SystemExit('Refusing legacy or different-source graph. Rebuild without --reuse-new-graph.')
+    else:
+        graph=build(text,'蓝宝石案 · The Blue Carbuncle',api,args.out/'build-cache',emit)
+        write(graph_path,graph)
+    code_hash=hashlib.sha256(b''.join((ROOT/p).read_bytes() for p in ['core.py','kernel_build.py','kernel_retrieve.py','research_prompts.py'])).hexdigest()
+    results=[]
+    # No scoring or filtering: every prespecified question runs with all four methods.
+    for qi,question in enumerate(QUESTIONS):
+        for method in ('agm_s','agm_r','agm_d','walk'):
+            print(f'QUESTION {qi+1}/{len(QUESTIONS)} METHOD {method}',flush=True)
+            signature=hashlib.sha256(json.dumps([source_hash,code_hash,args.model,question,method],ensure_ascii=False).encode()).hexdigest()
+            path=args.out/'answers'/(signature+'.json')
+            if path.exists(): result=json.loads(path.read_text('utf-8'))
+            else:
+                result=answer(graph,question,api,emit,method=method,dense_mode='required')
+                result['run_signature']=signature;result['generated_at']=time.strftime('%Y-%m-%dT%H:%M:%S%z')
+                write(path,result)
+            results.append(result)
+            write(args.out/'session.json',dict(graph=graph,results=results))
+    manifest=dict(kernel_version=VERSION,kernel_sha256=code_hash,source_sha256=source_hash,source_url='https://www.gutenberg.org/ebooks/1661',
+        story='The Adventure of the Blue Carbuncle',author='Arthur Conan Doyle',source_characters=len(text),scope='complete short story, not a long-context benchmark',
+        model=args.model,methods=['agm_s','agm_r','agm_d','walk'],questions=QUESTIONS,result_count=len(results),
+        build_usage=graph['meta'].get('build_usage'),answer_usage=dict(calls=sum(r['usage']['calls'] for r in results),total_tokens=sum(r['usage']['total_tokens'] for r in results)),
+        graph_quality=graph['meta']['quality'],generated_at=time.strftime('%Y-%m-%dT%H:%M:%S%z'))
+    write(args.out/'manifest.json',manifest)
+    print('COMPLETE: graph.json, session.json, manifest.json',flush=True)
