@@ -101,6 +101,8 @@ function refreshGoldIndex(){
   for(const n of S.graph.nodes){
     const k=String(n.name).trim().replace(/\s+/g,' ').toLowerCase();
     if(!names.has(k))names.set(k,n.id);
+  }
+  for(const n of S.graph.nodes){
     for(const a of n.aliases||[]){const ak=String(a).trim().replace(/\s+/g,' ').toLowerCase();if(!names.has(ak))names.set(ak,n.id);}
   }
   const entries=gold.questions.map(q=>{
