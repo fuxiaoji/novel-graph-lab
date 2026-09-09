@@ -4,7 +4,7 @@ title: "Novel Graph Lab: Evidence-grounded novel graphs and retrieval replay"
 type: software
 authors:
   - family-names: "fuxiaoji"
-version: 0.3.0
+version: 0.4.0
 date-released: 2026-09-08
 url: "https://github.com/fuxiaoji/novel-graph-lab"
 repository-code: "https://github.com/fuxiaoji/novel-graph-lab"
