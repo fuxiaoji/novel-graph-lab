@@ -2,9 +2,7 @@
 
 让完整小说变成可复用的证据图谱，比较不同检索方法，回放模型读取节点与选择关系的实际操作。
 
-[在线 Demo](https://fuxiaoji.github.io/novel-graph-lab/) · [下载项目与 Skill](https://github.com/fuxiaoji/novel-graph-lab/releases) · [English](README.md)
-
-[在线交互 Demo](https://fuxiaoji.github.io/novel-graph-lab/) · [English](README.md) · [日本語](README.ja.md) · [Español](README.es.md) · [下载项目与 Skill](https://github.com/fuxiaoji/novel-graph-lab/releases)
+[在线交互 Demo](https://fuxiaoji.github.io/novel-graph-lab/) · [English](README.md) · [日本語](README.ja.md) · [Español](README.es.md) · [下载项目与 Skill](https://github.com/fuxiaoji/novel-graph-lab/releases) · [媒体素材](docs/promo/README.md)
 
 ![完整图谱与原文证据](docs/images/overview.png)
 
