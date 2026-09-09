@@ -29,6 +29,8 @@ The [online demo](https://fuxiaoji.github.io/novel-graph-lab/) runs entirely in 
 1. Explore the full force-directed graph. Drag to rotate, scroll to zoom, and click a node to read its evidence.
 2. Select a saved question and press play. Pause, change speed, move through steps, or scrub the timeline.
 3. Enable the query subgraph only when you want to focus. Graph statistics always describe the complete graph.
+4. Watch the gold overlay: gold-ringed nodes are the question's key solution entities, and the ones the current method actually retrieved pulse in bright gold (the side panel counts hits per method).
+4. Watch the gold overlay: gold-ringed nodes are the question's key solution entities; the ones the selected method actually retrieved pulse in bright gold (the side panel counts hits per method).
 
 The hosted demo replays these new API operation records. To import your own novel or call an LLM, run the local app below. The public demo does not accept API credentials.
 
@@ -44,6 +46,8 @@ The hosted demo replays these new API operation records. To import your own nove
 | Ask grounded questions | AGM-S evidence expansion, AGM-R graph metadata reranking, AGM-D disagreement arbitration, or per-node tool navigation. |
 | Follow the evidence | Click citations or nodes to inspect quotes, relations and available source offsets. |
 | Replay retrieval | Moving points along recorded edges, step controls, speed control and a scrubber. |
+| Gold-node overlay | Per-question gold entities (`examples/demo-gold.json`) show as gold rings; nodes the selected method actually retrieved pulse in bright gold, with a per-method hit counter. |
+| Gold-node overlay | Per-question gold entities (defined in `examples/demo-gold.json`) show as gold rings; nodes actually touched by the current method's trace light up with a pulsing gold marker, plus a hit counter per method. |
 | Save and reuse | Export graph/session JSON and self-contained HTML. Reimport a graph to ask another question. |
 | Use an agent skill | A portable `novel-graph-lab` skill for UI launch, batch processing and evidence-aware maintenance. |
 

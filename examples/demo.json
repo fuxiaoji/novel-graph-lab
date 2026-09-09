@@ -56305,5 +56305,146 @@
       "run_signature": "dec67ef73e94a49124b329a947e098933364a77c37f3d2fd23df53946d431056",
       "generated_at": "2026-09-09T11:20:28+0800"
     }
-  ]
+  ],
+  "gold": {
+    "note": "Gold groups are the key entities of each question's known solution (public-domain plot), authored from the novel, listed by surface names and resolved against this graph at load time. A group counts as retrieved when any of its node IDs appears in that method's recorded trace or evidence node lists. This is a descriptive overlay for the replay UI, not a benchmark label set.",
+    "questions": [
+      {
+        "question": "Who took the Moonstone out of Rachel Verinder's sitting-room on the night it disappeared, and what evidence finally proves how it was taken?",
+        "groups": [
+          {
+            "label": "Franklin Blake（真凶，梦游中取走宝石）",
+            "names": [
+              "Franklin Blake",
+              "Mr. Franklin",
+              "Mr. Blake"
+            ]
+          },
+          {
+            "label": "Ezra Jennings（重建实验证明者）",
+            "names": [
+              "Ezra Jennings"
+            ]
+          },
+          {
+            "label": "laudanum / opium（被下的药）",
+            "names": [
+              "laudanum",
+              "the laudanum",
+              "laudanum bottle",
+              "the laudanum phial",
+              "opium",
+              "Opium experiment",
+              "Second opium experiment"
+            ]
+          },
+          {
+            "label": "Mr. Candy（无意中下药者）",
+            "names": [
+              "Mr. Candy"
+            ]
+          },
+          {
+            "label": "stained nightgown / paint smear（关键物证）",
+            "names": [
+              "nightgown",
+              "the nightgown",
+              "stained nightgown",
+              "paint-stain",
+              "paint smear",
+              "paint smear on the door",
+              "smear on the door paint",
+              "smear on the door",
+              "discovery of the nightgown"
+            ]
+          },
+          {
+            "label": "Miss Verinder's sitting-room（案发地点）",
+            "names": [
+              "Miss Verinder's sitting-room",
+              "sitting-room"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "How did the Moonstone travel from the Verinder house into Godfrey Ablewhite's hands and then to Mr. Luker in London?",
+        "groups": [
+          {
+            "label": "Godfrey Ablewhite（从Blake手中拿走宝石）",
+            "names": [
+              "Godfrey Ablewhite",
+              "Mr. Godfrey Ablewhite",
+              "Mr. Ablewhite"
+            ]
+          },
+          {
+            "label": "Mr. Luker（伦敦当铺经纪人）",
+            "names": [
+              "Septimus Luker",
+              "Mr. Luker"
+            ]
+          },
+          {
+            "label": "pledge receipt（典当凭据）",
+            "names": [
+              "Luker's receipt paper"
+            ]
+          },
+          {
+            "label": "the Moonstone Diamond（宝石本体）",
+            "names": [
+              "The Moonstone",
+              "Moonstone",
+              "the Diamond",
+              "Diamond",
+              "the Moonstone Diamond"
+            ]
+          }
+        ]
+      },
+      {
+        "question": "Why did Rosanna Spearman hide a tin box in the Shivering Sand, and what did it contain?",
+        "groups": [
+          {
+            "label": "Rosanna Spearman（藏物者）",
+            "names": [
+              "Rosanna Spearman"
+            ]
+          },
+          {
+            "label": "Shivering Sand（藏匿地点）",
+            "names": [
+              "Shivering Sand"
+            ]
+          },
+          {
+            "label": "tin box / case（锡盒）",
+            "names": [
+              "tin case",
+              "Japanned tin case",
+              "Rosanna's box"
+            ]
+          },
+          {
+            "label": "stained nightgown（盒中物证）",
+            "names": [
+              "nightgown",
+              "the nightgown",
+              "stained nightgown",
+              "paint-stain"
+            ]
+          },
+          {
+            "label": "Rosanna's letter / note（盒中信件）",
+            "names": [
+              "Rosanna's letter",
+              "Rosanna Spearman's letter",
+              "Rosanna's note"
+            ]
+          }
+        ]
+      }
+    ]
+  }
 }

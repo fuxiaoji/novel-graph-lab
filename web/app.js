@@ -2,14 +2,15 @@
 const $ = id => document.getElementById(id);
 const colors = {person:'#6082a2', location:'#709386', time_anchor:'#b4975b', clue_object:'#be8b62', event:'#b47b83', evidence_sentence:'#8e82a9'};
 const typeNames = {person:'人物', location:'地点', time_anchor:'时间', clue_object:'物件', event:'事件', evidence_sentence:'证词'};
-const S = {graph:null, result:null, demo:null, config:null, text:'', title:'', time:0, playing:false, speed:1, yaw:.25, pitch:.18, zoom:1, layout:'force', positions:new Map(), points:[], selected:null, job:null, liveTrace:[], frame:0, viewIds:new Set()};
+const S = {graph:null, result:null, demo:null, config:null, text:'', title:'', time:0, playing:false, speed:1, yaw:.25, pitch:.18, zoom:1, layout:'force', positions:new Map(), points:[], selected:null, job:null, liveTrace:[], frame:0, viewIds:new Set(), goldIndex:null, goldIds:new Set(), goldHitIds:new Set()};
 const canvas = $('graph'), ctx = canvas.getContext('2d');
 let cssSource='', jsSource='', htmlSource='';
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,6500);}
 function tabs(node){$('answerPane').hidden=node;$('nodePane').hidden=!node;$('answerTab').classList.toggle('selected',!node);$('nodeTab').classList.toggle('selected',node);}
 $('answerTab').onclick=()=>tabs(false);$('nodeTab').onclick=()=>tabs(true);
-$('legend').innerHTML=Object.keys(colors).map(k=>`<span><i style="background:${colors[k]}"></i>${typeNames[k]}</span>`).join('');
+$('legend').innerHTML=Object.keys(colors).map(k=>`<span><i style="background:${colors[k]}"></i>${typeNames[k]}</span>`).join('')
+  +'<span><i class="gold-miss"></i>金标未检索</span><span><i class="gold-hit"></i>金标命中</span>';
 function trace(){return S.result?.trace || S.liveTrace;}
 const duration=()=>Math.max(1,trace().length)*3.8;
 function stageIndex(){return Math.floor((S.time+0.000001)/3.8);}
@@ -33,8 +34,41 @@ function hydrateGraph(g){
   $('bookInfo').textContent=g.meta?.mode==='historical'?'研究示例 / 已保存的图谱与问答':`${(g.meta?.characters||0).toLocaleString()} 字符 · ${g.passages.length} 个文本块`;
   S.selected=null;S.viewIds=new Set();$('nodeTitle').textContent='选择一个节点';$('nodeEvidence').replaceChildren();$('nodeRelations').replaceChildren();
 }
+function refreshGoldIndex(){
+  S.goldIndex=null;
+  const gold=S.demo?.gold;
+  if(!gold||!S.graph)return;
+  const names=new Map();
+  for(const n of S.graph.nodes){
+    const k=String(n.name).trim().replace(/\s+/g,' ').toLowerCase();
+    if(!names.has(k))names.set(k,n.id);
+    for(const a of n.aliases||[]){const ak=String(a).trim().replace(/\s+/g,' ').toLowerCase();if(!names.has(ak))names.set(ak,n.id);}
+  }
+  const entries=gold.questions.map(q=>{
+    const groups=q.groups.map(g=>{
+      const ids=[...new Set(g.names.map(n=>names.get(String(n).trim().replace(/\s+/g,' ').toLowerCase())).filter(Boolean))];
+      return {label:g.label,ids};
+    });
+    return [q.question,groups];
+  }).filter(([,groups])=>groups.length);
+  S.goldIndex=new Map(entries);
+}
+function applyGold(result){
+  S.goldIds=new Set();S.goldHitIds=new Set();
+  const groups=S.goldIndex?.get(result.question)||[];
+  const el=$('goldSummary');
+  if(!groups.length){el.hidden=true;return;}
+  const retrieved=new Set((result.trace||[]).flatMap(s=>s.node_ids||[]).concat((result.evidence||[]).flatMap(e=>e.node_ids||[])));
+  const rows=groups.map(g=>{const hits=g.ids.filter(id=>retrieved.has(id));hits.forEach(id=>S.goldHitIds.add(id));g.ids.forEach(id=>S.goldIds.add(id));return{label:g.label,hit:hits.length>0,first:hits[0]||g.ids[0]};});
+  const hitCount=rows.filter(r=>r.hit).length;
+  el.hidden=false;
+  el.innerHTML=`<strong>金标命中 ${hitCount}/${rows.length} 组（本方法轨迹）</strong>`
+    +rows.map(r=>`<button class="gold-chip ${r.hit?'hit':'miss'}" data-gold="${r.first||''}" title="${r.hit?'已被本方法检索到':'未被本方法检索到'}·点击查看节点">${r.hit?'★':'☆'} ${esc(r.label)}</button>`).join('');
+}
+$('goldSummary').onclick=e=>{const b=e.target.closest('[data-gold]');if(b&&b.dataset.gold)selectNode(b.dataset.gold);};
 function setResult(result){
   S.result=result;S.liveTrace=[];S.time=0;S.playing=false;S.viewIds=new Set((result.trace||[]).flatMap(s=>s.node_ids||[]));
+  applyGold(result);
   $('modeBadge').textContent=result.mode==='historical'?'历史记录回放':(result.method_label||'真实 API 记录');
   $('modeNote').textContent=result.mode==='historical'?'历史 Demo：回放原始检索与回答记录':'已完成 API 问答 · 可重播或继续提问';
   $('answerState').textContent=result.mode==='historical'?'历史回答 · 引用来自原 Demo':'回答完成 · 点击引用核对原文';
@@ -92,11 +126,25 @@ function frame(ts){
     const projected=new Map();S.graph.nodes.forEach((n,i)=>{if(!visible.has(n.id))return;let p=focused?.get(n.id)||S.positions.get(n.id);if(S.layout==='layers'){const pos=n.text_pos??n.x??i/Math.max(1,S.graph.nodes.length);p={x:(pos-.5)*480,y:(Object.keys(colors).indexOf(n.type)-2.5)*65,z:((n.y??Math.sin(i*2.3)*.5+.5)-.5)*240};}projected.set(n.id,project(p,w,h));});
     for(const e of S.graph.edges){const a=projected.get(e.source),b=projected.get(e.target);if(!a||!b)continue;const on=activeEdges.has(e.id);line(a,b,on?'#507998aa':S.selected&&(e.source===S.selected||e.target===S.selected)?'#6b8aa8aa':'#70879e38',on?1.6:.65);}
     const sorted=[...projected].sort((a,b)=>b[1].z-a[1].z);S.points=[];const labelBoxes=[];
-    for(const[id,p]of sorted){const n=S.nodes.get(id),on=active.has(id)||id===S.selected;const c=on?'#385e7f':colors[n.type]||'#899eb2';const r=Math.max(1.3,(on?4:2.2)*p.scale);ctx.globalAlpha=on?1:((st?.kind==='question'||!st)? .9:.5);glow(p,c,r,on);ctx.globalAlpha=1;S.points.push({id,...p,r});if((on&&(active.size<26||id===S.selected))||(S.overview&&S.labelIds.has(id))){
+    for(const[id,p]of sorted){const n=S.nodes.get(id),on=active.has(id)||id===S.selected;const c=on?'#385e7f':colors[n.type]||'#899eb2';const r=Math.max(1.3,(on?4:2.2)*p.scale);ctx.globalAlpha=on?1:((st?.kind==='question'||!st)? .9:.5);glow(p,c,r,on);ctx.globalAlpha=1;S.points.push({id,...p,r});if((on&&(active.size<26||id===S.selected))||(S.overview&&S.labelIds.has(id))||S.goldHitIds.has(id)){
       ctx.font='11px "Segoe UI","Microsoft YaHei",sans-serif';const label=n.name.length>22?n.name.slice(0,22)+'…':n.name,lw=ctx.measureText(label).width;let lx=Math.min(w-lw-12,p.x+r+5),ly=p.y+3;
       for(let k=0;k<15;k++){if(!labelBoxes.some(b=>lx<b.x+b.w&&lx+lw>b.x&&Math.abs(ly-b.y)<14))break;ly+=14;}
       labelBoxes.push({x:lx,y:ly,w:lw});if(Math.abs(ly-p.y)>18)line(p,{x:lx,y:ly-4},'#7892aa77',.5);ctx.fillStyle='#40566a';ctx.fillText(label,lx,ly);
     }}
+    if(S.goldIds.size){
+      const pulse=.5+.5*Math.sin(ts/380);
+      for(const id of S.goldIds){const p=projected.get(id);if(!p)continue;
+        if(S.goldHitIds.has(id)){
+          const halo=(9+5*pulse)*Math.max(.55,p.scale)+6;
+          const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,halo);g.addColorStop(0,'#f6bd3f55');g.addColorStop(1,'#f6bd3f00');
+          ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,halo,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#f0a92e';ctx.beginPath();ctx.arc(p.x,p.y,Math.max(2.7,3.5*p.scale),0,Math.PI*2);ctx.fill();
+          ctx.strokeStyle='#fff3d0';ctx.lineWidth=1;ctx.stroke();
+        }else{
+          ctx.strokeStyle='#d4a017';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(p.x,p.y,Math.max(3.4,4.6*p.scale),0,Math.PI*2);ctx.stroke();
+        }
+      }
+    }
     const progress=(S.time%3.8)/3.8;
     const travel=st?.traversals?.length?st.traversals:(st?.edge_ids||[]).map(id=>S.edges.get(id)).filter(Boolean);
     travel.forEach((e,i)=>{const a=projected.get(e.source),b=projected.get(e.target);if(!a||!b)return;for(let j=0;j<2;j++){const t=(progress*2+i*.13+j*.5)%1;const p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};glow(p,'#386c94',3,true);}});
@@ -117,12 +165,12 @@ canvas.onpointerup=e=>{if(drag&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.
 canvas.onpointercancel=()=>drag=null;canvas.onpointerleave=()=>{$('hover').hidden=true;};
 canvas.addEventListener('wheel',e=>{e.preventDefault();S.zoom=Math.max(.3,Math.min(4,S.zoom*Math.exp(-e.deltaY*.001)));},{passive:false});
 function hit(x,y){return [...S.points].reverse().find(p=>Math.hypot(x-p.x,y-p.y)<Math.max(9,p.r+4));}
-function selectNode(id){const n=S.nodes.get(id);if(!n)return;S.selected=id;tabs(true);$('nodeTitle').textContent=n.name;$('nodeType').textContent=`${typeNames[n.type]||n.type} · ${id} · ${(S.adj.get(id)||[]).length} 条关系`;
+function selectNode(id){const n=S.nodes.get(id);if(!n)return;S.selected=id;tabs(true);$('nodeTitle').textContent=n.name;$('nodeType').textContent=`${typeNames[n.type]||n.type} · ${id} · ${(S.adj.get(id)||[]).length} 条关系${S.goldIds.has(id)?` · 金标${S.goldHitIds.has(id)?'命中':'未命中'}`:''}`;
   $('nodeEvidence').innerHTML=(n.evidence_ids||[]).slice(0,12).map(e=>`<div class="evidence"><strong>${esc(e.passage_id||'历史片段')}</strong><p>${esc(e.quote)}</p></div>`).join('');
   $('nodeRelations').innerHTML=(S.adj.get(id)||[]).slice(0,30).map(e=>`<div class="relation">${esc(S.nodes.get(e.source)?.name)} <span class="accent">${esc(e.type)}</span> ${esc(S.nodes.get(e.target)?.name)}<p class="micro">${esc(e.quote)}</p></div>`).join('');
 }
 document.addEventListener('click',e=>{const el=e.target.closest('[data-cite]');if(!el||!S.result)return;const item=S.result.evidence.find(x=>x.id===el.dataset.cite);if(!item)return;document.querySelectorAll('.evidence.active').forEach(el=>el.classList.remove('active'));const card=$('cite-'+item.id);card?.classList.add('active');card?.scrollIntoView({behavior:'smooth',block:'nearest'});if(item.node_ids?.length)S.selected=item.node_ids[0];});
-async function loadDemo(){if(S.job)return toast('请先等待当前任务完成。');try{S.demo=window.__BOOT__||S.originalDemo||await fetch('/demo.json').then(r=>r.json());S.originalDemo=S.demo;S.text='';hydrateGraph(S.demo.graph);$('presets').hidden=false;$('presets').innerHTML=S.demo.results.map((r,i)=>`<option value="${i}">${i+1}. [${esc(r.method_label||r.method||"历史")}] ${esc(r.question)}</option>`).join('');selectPreset(0);}catch(e){toast(e.message);}}
+async function loadDemo(){if(S.job)return toast('请先等待当前任务完成。');try{S.demo=window.__BOOT__||S.originalDemo||await fetch('/demo.json').then(r=>r.json());S.originalDemo=S.demo;S.text='';hydrateGraph(S.demo.graph);refreshGoldIndex();$('presets').hidden=false;$('presets').innerHTML=S.demo.results.map((r,i)=>`<option value="${i}">${i+1}. [${esc(r.method_label||r.method||"历史")}] ${esc(r.question)}</option>`).join('');selectPreset(0);}catch(e){toast(e.message);}}
 function selectPreset(i){const r=S.demo.results[i];if(r.method)$('method').value=r.method;$('question').value=r.question;setResult(r);}
 $('presets').onchange=e=>selectPreset(+e.target.value);$('loadDemo').onclick=loadDemo;
 $('importBtn').onclick=()=>{if(window.__PUBLIC_DEMO__)return toast('在线示例只回放已有记录。请从 GitHub 下载项目，在本机运行后导入小说和 API。');$('importDialog').showModal();};$('closeDialog').onclick=()=>$('importDialog').close();
@@ -153,12 +201,12 @@ function download(name,content,type){const url=URL.createObjectURL(new Blob([con
 async function serverExport(format){const r=await jsonPost('/api/export',{session:session(),format});const a=document.createElement('a');a.href=r.url;a.download='NovelGraph-回放.'+format;a.click();toast('导出已保存：'+r.path);}
 function session(){if(!S.graph)throw Error('请先加载或构建图谱。');return {graph:S.graph,results:S.result?[S.result]:[]};}
 $('exportJson').onclick=async()=>{try{if(location.protocol!=='file:'&&!window.__BOOT__)return await serverExport('json');download('novel-graph-session.json',JSON.stringify(session(),null,2),'application/json');}catch(e){toast(e.message);}};
-$('jsonFile').onchange=async e=>{if(S.job)return toast('请先等待任务完成。');try{const file=e.target.files[0];if(!file)return;const data=JSON.parse(await file.text());hydrateGraph(data.graph||data);S.text='';S.result=null;S.liveTrace=[];renderSteps();$('presets').hidden=true;if(data.results?.length){S.demo=data;$('presets').innerHTML=data.results.map((r,i)=>`<option value="${i}">${i+1}. [${esc(r.method_label||r.method||"历史")}] ${esc(r.question)}</option>`).join('');$('presets').hidden=false;selectPreset(0);}else{$('answerText').textContent='图谱已载入。配置 API 后可以提问。';$('evidenceList').replaceChildren();}toast('已载入图谱。');}catch(err){toast(err.message);}};
+$('jsonFile').onchange=async e=>{if(S.job)return toast('请先等待任务完成。');try{const file=e.target.files[0];if(!file)return;const data=JSON.parse(await file.text());hydrateGraph(data.graph||data);S.text='';S.result=null;S.liveTrace=[];S.goldIds=new Set();S.goldHitIds=new Set();$('goldSummary').hidden=true;renderSteps();$('presets').hidden=true;if(data.results?.length){S.demo=data;$('presets').innerHTML=data.results.map((r,i)=>`<option value="${i}">${i+1}. [${esc(r.method_label||r.method||"历史")}] ${esc(r.question)}</option>`).join('');$('presets').hidden=false;refreshGoldIndex();selectPreset(0);}else{$('answerText').textContent='图谱已载入。配置 API 后可以提问。';$('evidenceList').replaceChildren();}toast('已载入图谱。');}catch(err){toast(err.message);}};
 function safeJSON(data){return JSON.stringify(data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');}
 $('exportHtml').onclick=async()=>{try{if(location.protocol!=='file:'&&!window.__BOOT__)return await serverExport('html');const data=session();if(!htmlSource){[htmlSource,cssSource,jsSource]=await Promise.all(['/', '/style.css','/app.js'].map(p=>fetch(p).then(r=>{if(!r.ok)throw Error('无法读取导出资源');return r.text();})));}
   const html=htmlSource.replace('<link rel="stylesheet" href="/style.css">',`<style>${cssSource}</style>`).replace('<script src="/app.js"></script>',`<script>window.__BOOT__=${safeJSON(data)};</script><script>${jsSource.replace(/<\/script/gi,'<\\/script')}</script>`);
   download('NovelGraph-动画回放.html',html,'text/html');toast('已导出可离线播放的 HTML，未包含 API 密钥。');}catch(e){toast('导出失败：'+e.message);}};
-async function start(){if(window.__PUBLIC_DEMO__){$('importBtn').textContent='在本机使用';$('footerStatus').textContent='静态交互示例。新小说与 API 问答请在本机运行。';}if(window.__BOOT__){S.demo=window.__BOOT__;hydrateGraph(S.demo.graph);if(S.demo.results.length){$('presets').innerHTML=S.demo.results.map((r,i)=>`<option value="${i}">${i+1}. [${esc(r.method_label||r.method||"历史")}] ${esc(r.question)}</option>`).join('');selectPreset(0);}htmlSource=document.documentElement.outerHTML; // Offline re-export uses the current self-contained file, handled below.
+async function start(){if(window.__PUBLIC_DEMO__){$('importBtn').textContent='在本机使用';$('footerStatus').textContent='静态交互示例。新小说与 API 问答请在本机运行。';}if(window.__BOOT__){S.demo=window.__BOOT__;hydrateGraph(S.demo.graph);refreshGoldIndex();if(S.demo.results.length){$('presets').innerHTML=S.demo.results.map((r,i)=>`<option value="${i}">${i+1}. [${esc(r.method_label||r.method||"历史")}] ${esc(r.question)}</option>`).join('');selectPreset(0);}htmlSource=document.documentElement.outerHTML; // Offline re-export uses the current self-contained file, handled below.
   $('exportHtml').onclick=()=>download('NovelGraph-动画回放.html','<!doctype html>\n'+htmlSource,'text/html');
 }else await loadDemo();requestAnimationFrame(frame);}
 start().catch(e=>toast(e.message));

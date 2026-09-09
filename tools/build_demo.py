@@ -10,6 +10,9 @@ if __name__ == '__main__':
     parser.add_argument('--public', action='store_true')
     args = parser.parse_args()
     data = json.loads((ROOT/'examples/demo.json').read_text('utf-8'))
+    gold_path = ROOT/'examples/demo-gold.json'
+    if gold_path.exists():
+        data['gold'] = json.loads(gold_path.read_text('utf-8'))
     standalone(data, args.out)
     if args.public:
         html = args.out.read_text('utf-8').replace('window.__BOOT__=', 'window.__PUBLIC_DEMO__=true;window.__BOOT__=', 1)
