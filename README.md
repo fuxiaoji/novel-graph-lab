@@ -20,11 +20,11 @@
 
 A novel is linear; its evidence is not. Novel Graph Lab builds a reusable relation-centered graph from the full source and offers four evidence-reading strategies. The default view keeps the entire graph visible, including isolated nodes. Animations replay actual retrieval operations and brief evidence summaries, not private model reasoning.
 
-**v0.3 corrects the original demo packaging.** The former release used an early graph and simplified retrieval. This version ports the later research pipeline and regenerates both the graph and all example answers. See [kernel lineage and differences](docs/kernel.md).
+**v0.4 publishes a full-length-novel demo.** The complete public-domain novel *The Moonstone* (1,073,378 characters, about 25× the previous story) is rebuilt into a 427-node / 1,460-edge evidence graph with GLM-5.3 in 109 build calls, plus 12 real answers (3 questions × 4 methods). Large-context batching (`--pass1-group`, `--pass2-chars`, `--workers`) cuts build calls by ~7× versus the small-model per-chunk loop, and verbatim validation now bridges whitespace-only differences while always storing exact source slices. v0.3 previously corrected the demo packaging and ported the later research kernel. See [kernel lineage and differences](docs/kernel.md).
 
 ## Try it
 
-The [online demo](https://fuxiaoji.github.io/novel-graph-lab/) runs entirely in the browser and needs no account or API key. It contains a **newly built graph of the complete Blue Carbuncle story and 12 real GLM-4.7 answers (3 questions × 4 methods)**.
+The [online demo](https://fuxiaoji.github.io/novel-graph-lab/) runs entirely in the browser and needs no account or API key. It contains a **newly built graph of the complete novel *The Moonstone* (1.07M characters, 427 nodes, 1,460 edges) and 12 real GLM-5.3 answers (3 questions × 4 methods)**.
 
 1. Explore the full force-directed graph. Drag to rotate, scroll to zoom, and click a node to read its evidence.
 2. Select a saved question and press play. Pause, change speed, move through steps, or scrub the timeline.
@@ -103,7 +103,7 @@ flowchart LR
   W --> E
 ```
 
-Default extraction uses 1,500-character blocks with 100-character overlap. Both passes validate literal source spans; the complete source remains available. The graph carries typed relations, source offsets, confidence and decoy metadata. Quality reports retain isolated nodes instead of deleting them to improve a metric.
+Default extraction uses 1,500-character blocks with 100-character overlap. Both passes validate literal source spans (whitespace-run differences are bridged, but stored quotes are always exact source slices); the complete source remains available. For ~1M-token models, batch the same passes with `--pass1-group 24 --pass2-chars 6000 --build-max-tokens 16000 [--workers N]`; the full 1.07M-character demo graph took 109 calls instead of ~760. The graph carries typed relations, source offsets, confidence and decoy metadata. Quality reports retain isolated nodes instead of deleting them to improve a metric.
 
 AGM-S combines option-conditioned (or neutral-facet) BM25, BGE-M3 and 16-round personalized PageRank with reciprocal-rank fusion. AGM-R schedules up to eight passages from 28 graph candidate cards. AGM-D compares two independent readers and calls an evidence referee on disagreement. Tool navigation reads one node at a time and accepts only a real edge adjacent to that node, with an eight-node budget and cycle protection.
 
@@ -124,7 +124,7 @@ The public demo was generated with BGE-M3. The UI's automatic mode reports a vis
 
 - **Isolated-node rate:** nodes with no connection to another node / all nodes. Self-loops do not count as another-node connections.
 - **Source coverage:** union of the source-character intervals quoted by nodes / full source length. Overlapping quotes count once; chunk sizes do not count as evidence coverage. It is not an accuracy score.
-- **Unavailable:** the historical demo lacks complete source text and verifiable positions, so coverage is intentionally unavailable. Its isolated-node rate is **92 / 739 = 12.4%**.
+- **Published example (v0.4):** 427 nodes, 1,460 edges, 3 isolated nodes (0.7%), built from the complete 1,073,378-character source with verbatim-validated quotes, so coverage is computed from real evidence intervals. A historical file that lacks complete source text and verifiable positions shows coverage as intentionally unavailable instead of an excerpt-length guess.
 
 ## Scope, costs and privacy
 
@@ -164,13 +164,18 @@ Application code is [MIT licensed](LICENSE). Bundled literary excerpts are sourc
 
 ## Reproduce the new demo
 
-The bundled source is the **complete short story** *The Adventure of the Blue Carbuncle* by Arthur Conan Doyle, from [Project Gutenberg](https://www.gutenberg.org/ebooks/1661). This is an end-to-end integration example, not a long-context benchmark. Three questions are fixed before running; each runs through all four methods. We retain all outputs, including uncertainties and unsuccessful navigation, without selecting only successful answers.
+The bundled source is the **complete novel** *The Moonstone* by Wilkie Collins (1868, public domain, 1,073,378 characters), from [Project Gutenberg](https://www.gutenberg.org/ebooks/155). This is an end-to-end integration example, not a long-context benchmark. Three questions are fixed before running; each runs through all four methods. We retain all outputs, including uncertainties and unsuccessful navigation, without selecting only successful answers. The previous v0.3 short-story run (*The Blue Carbuncle*, GLM-4.7) is retained at [examples/blue-carbuncle.txt](examples/blue-carbuncle.txt).
 
 ```bash
 # Set NOVEL_API_KEY in the process environment; do not place it in a command argument.
-python tools/run_demo.py --model glm-4.7
-# After inspecting outputs/v3/session.json, copy it to examples/demo.json.
+python tools/run_demo.py --model glm-5.3 \
+  --source examples/the-moonstone.txt --title '月亮宝石 · The Moonstone' \
+  --source-url https://www.gutenberg.org/ebooks/155 \
+  --story 'The Moonstone' --author 'Wilkie Collins' \
+  --scope 'complete full-length public-domain novel (1868); exploratory functional run, not a benchmark' \
+  --questions examples/moonstone-questions.json --pass1-group 24 --pass2-chars 6000 --build-max-tokens 16000
+# After auditing outputs/moonstone/session.json (tools/audit_demo.py), copy it to examples/demo.json.
 python tools/build_demo.py --public --out docs/index.html
 ```
 
-[Run manifest](examples/demo-manifest.json) · [Complete source](examples/blue-carbuncle.txt) · [Graph and all answers](examples/demo.json)
+[Run manifest](examples/demo-manifest.json) · [Complete source](examples/the-moonstone.txt) · [Graph and all answers](examples/demo.json)

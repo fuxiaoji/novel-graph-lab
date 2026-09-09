@@ -1,6 +1,6 @@
 ---
 name: novel-graph-lab
-description: 将完整小说和问题转为有原文证据的知识图谱问答及三维光点检索动画；使用用户配置的 Chat Completions API，支持复用图谱、导出离线 HTML 和回放检索记录。用于小说长上下文图谱推理和此项目的维护，不用于一般思维导图或文献综述。
+description: 将完整小说和问题转为有原文证据的知识图谱问答及三维光点检索动画；使用用户配置的 Chat Completions API，支持大上下文批量建图、复用图谱、导出离线 HTML 和回放检索记录。用于小说长上下文图谱推理和此项目的维护，不用于一般思维导图或文献综述。
 ---
 
 # Novel Graph Lab
@@ -9,16 +9,27 @@ description: 将完整小说和问题转为有原文证据的知识图谱问答�
 
 使用配套项目把小说分块建图、检索、回答，再生成可交互的三维证据动画。先通过 `scripts/launch.py --print-project` 定位项目；项目缺失时按 `references/project.md` 的可搬迁模板恢复。项目只依赖 Python 3.10+ 标准库。
 
-## 新内核与交付路径
+## 内核与交付路径
 
 使用 `kernel_build.py` 的双遍流程：逐字情节证据筛选 → v4 关系优先建图 → 有证据的人物归并 → 质量检查。默认 1500 字符 / 100 重叠，保留完整原文。不要恢复早期两轮扩散内核。方法来源和移植差异见配套项目 `docs/kernel.md`。
 
 - 网页入口：`python scripts/launch.py --open`。导入完整 TXT/Markdown、问题、Base URL、模型 ID 与 Key。
-- 已有完整参数：项目 `cli.py --novel <path> --question <question> --method agm_s|agm_r|agm_d|walk --out <output>`；密钥读取 `NOVEL_API_KEY`。图谱可通过 `--graph` 复用。
+- 批处理：项目 `cli.py --novel <path> --question <question> --method agm_s|agm_r|agm_d|walk --out <output>`；密钥读取 `NOVEL_API_KEY`。图谱可通过 `--graph` 复用。
 - AGM-S 是三路证据扩展；AGM-R 是图谱候选重排；AGM-D 独立运行两路并对分歧仲裁；walk 逐节点读取、逐次选真实邻接边。不要将 walk 的动作说明称为私有思维链。
 - S/R/D 优先使用本机 Ollama 的 BGE-M3，`--dense-mode required` 要求向量服务可用。自动降级必须保留警告，不冒充原三路实验配置。walk 不依赖向量。
-- 新 Demo 使用完整《蓝宝石案》，3 问 × 4 方法的真实 GLM 记录。重新生成用 `tools/run_demo.py`；核对 `manifest.json`，不得以旧 Dashboard 图和旧回答替代新建图运行。
 - 先保存图谱再回答；失败保留缓存与错误，不用模拟回答补齐实录。
+
+## 长篇小说与大上下文模型
+
+小上下文模型（约 16k token）按默认逐块调用；现代大上下文模型（约 1M token）必须用批量参数减少调用次数：
+
+- `--pass1-group N`：一次筛选调用合并 N 个分块（如 24 = 每次约 36k 字符）。
+- `--pass2-chars C`：每 C 个已校验证据字符合并一次关系抽取调用（如 6000）。
+- `--build-max-tokens`：批量输出上限（如 16000），截断即报错，不静默丢段。
+
+逐字校验是空白串不敏感的：模型把换行折叠为空格时仍可命中，但入库引文永远取原文精确切片，词序与内容必须完全一致，不接受任何改写。
+
+公开 Demo 使用公版长篇《月亮宝石》（Wilkie Collins，1868，全书约 107 万字符）以 glm-5.3 批量重建；3 问 × 4 方法为真实模型记录。重新生成用 `tools/run_demo.py`；核对 `manifest.json`，不得以旧 Dashboard 图和旧回答替代新建图运行。受版权保护的小说不要整本发布，只在本地处理。
 
 ## 可追溯性
 
@@ -26,7 +37,7 @@ description: 将完整小说和问题转为有原文证据的知识图谱问答�
 
 新建图的节点和关系引文必须逐字存在于相应文本块，保留完整原文和字符偏移。不要为了图更密集而补造关系，不把共同出现自动称作因果。别名歧义、证词冲突和时间变化保留为不确定性。发现无效引用或没有引用时，在结果中明确标记。
 
-早期 Dashboard 历史记录与新 Demo 必须区分。公开默认示例为新内核实录；如用户另外导入历史记录，保留历史标识，不补造缺失步骤。研究报告中的 G7/G9/G10 正确率不是本移植版或 GLM 的准确率。
+早期 Dashboard 历史记录与新 Demo 必须区分。公开默认示例为新内核实录；如用户另外导入历史记录，保留历史标识，不补造缺失步骤。研究报告中的 G7/G9/G10 正确率不是本移植版或任何演示模型的准确率。
 
 ## 输出与验证
 
@@ -34,4 +45,4 @@ description: 将完整小说和问题转为有原文证据的知识图谱问答�
 
 改动检索或建图后运行 `python -m unittest discover -s tests -v`；界面改动核对导入、检索、动画暂停/拖动、节点详情和导出。没有真实 API 时使用 `tests/mock_api.py` 验证接口，但明确说明这不是对真实模型准确率的验证。不要为完成演示擅自挪用其他项目密钥或启动大额全书实验。
 
-迁移和文件结构见 [references/project.md](references/project.md)。
+迁移、安装和文件结构见 [references/project.md](references/project.md) 与 [INSTALL.md](INSTALL.md)。

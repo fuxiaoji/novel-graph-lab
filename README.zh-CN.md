@@ -8,13 +8,13 @@
 
 ![完整图谱与原文证据](docs/images/overview.png)
 
-## v0.3 修正了什么
+## v0.4 更新：整部长篇小说 Demo
 
-上一版误把早期 Dashboard 图谱作为默认示例，检索也只保留了简化的两轮扩散。本版替换为后续研究方法的可搬迁内核：**逐字情节筛选、v4 关系优先建图、人物归并、质量检查，以及 AGM-S/R/D 和逐节点工具导航**。
+Demo 换成公版长篇小说《月亮宝石》（Wilkie Collins，1868，全书 1,073,378 字符，约为旧短篇的 25 倍），用 GLM-5.3 重建：**427 节点 / 1,460 边证据图谱（孤立率 0.7%）**，建图仅 109 次调用；3 个预先固定的问题 × 4 种方法共 12 份真实回答，全部通过逐字引文审计。
 
-Demo 使用《蓝宝石案》完整英文短篇的 42,115 个字符重新建图，3 个预先固定的问题分别运行 4 种方法，共 12 份真实 GLM-4.7 回答。小说、图谱、回答和轨迹均来自这次新流程，没有沿用旧答案。
+面向约 1M 上下文模型的批量参数（`--pass1-group`、`--pass2-chars`、`--workers` 并发）把建图调用从逐块方式的约 760 次降到约七分之一；引文校验升级为空白串不敏感匹配（模型把换行折叠为空格时仍可命中），但入库引文永远取原文精确切片。v0.3 曾把误打包的早期 Dashboard 示例替换为后来研究内核的可搬迁实现（逐字情节筛选、v4 关系优先建图、人物归并、质量检查、AGM-S/R/D 与逐节点工具导航）。详见[内核谱系](../docs/kernel.md)。
 
-这是完整短篇上的端到端演示，**不是超长小说性能或准确率基准测试**。[运行清单](examples/demo-manifest.json)记录模型、源文哈希、内核哈希、用量和图谱质量。
+这是完整长篇上的端到端演示，**不是超长小说性能或准确率基准测试**。[运行清单](examples/demo-manifest.json)记录模型、源文哈希、内核哈希、用量、批量参数和图谱质量。
 
 ## 四种方法
 
@@ -50,7 +50,7 @@ ollama serve
 
 前端可选「必须使用 BGE-M3」以保持三路检索；自动模式连接失败会明确提示降为 BM25 + 图谱。逐节点导航无需向量服务。
 
-GLM Coding 接口为 `https://open.bigmodel.cn/api/coding/paas/v4`，Demo 模型为 `glm-4.7`。使用其他供应商时，填入兼容 Chat Completions 的 URL 与模型名称。密钥只保存在当前任务内存，发布文件不包含密钥。
+GLM Coding 接口为 `https://open.bigmodel.cn/api/coding/paas/v4`，Demo 模型为 `glm-5.3`。使用其他供应商时，填入兼容 Chat Completions 的 URL 与模型名称。密钥只保存在当前任务内存，发布文件不包含密钥。
 
 ## 命令行与重新生成 Demo
 
@@ -59,10 +59,10 @@ GLM Coding 接口为 `https://open.bigmodel.cn/api/coding/paas/v4`，Demo 模型
 ```bash
 python cli.py --novel novel.txt --question "哪些线索推翻了嫌疑人的证词？" --method agm_d --dense-mode required --base-url https://your-provider.example/v1 --model YOUR_MODEL --out outputs/my-novel
 python cli.py --graph outputs/my-novel/graph.json --question "关键线索怎样相连？" --method walk --model YOUR_MODEL --out outputs/next
-python tools/run_demo.py --model glm-4.7
+python tools/run_demo.py --model glm-5.3   --source examples/the-moonstone.txt --title '月亮宝石 · The Moonstone'   --source-url https://www.gutenberg.org/ebooks/155   --story 'The Moonstone' --author 'Wilkie Collins'   --scope 'complete full-length public-domain novel (1868); exploratory functional run, not a benchmark'   --questions examples/moonstone-questions.json --pass1-group 24 --pass2-chars 6000 --build-max-tokens 16000
 ```
 
-最后一条命令会从公开小说原文运行新建图与全部 12 份问答，保存 `outputs/v3/graph.json`、`session.json`、`manifest.json`。完成后检查并将 session 作为新的 `examples/demo.json`，再执行 `python tools/build_demo.py --public --out docs/index.html`。
+最后一条命令会从公开小说原文运行新建图与全部 12 份问答（大上下文批量参数见上文），保存 `outputs/moonstone/graph.json`、`session.json`、`manifest.json`。用 `tools/audit_demo.py` 审计后，将 session 作为新的 `examples/demo.json`，再执行 `python tools/build_demo.py --public --out docs/index.html`。
 
 ## 图谱指标与动画
 

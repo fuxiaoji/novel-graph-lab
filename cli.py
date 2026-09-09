@@ -19,14 +19,19 @@ def main():
     p.add_argument('--model', default=os.environ.get('NOVEL_API_MODEL', ''))
     p.add_argument('--encoding', default='utf-8-sig')
     p.add_argument('--chunk-size', type=int, default=1500)
+    p.add_argument('--pass1-group', type=int, default=1, help='passages per pass1 selection call; raise for ~1M-token models')
+    p.add_argument('--pass2-chars', type=int, default=0, help='verified span characters per pass2 extraction call; 0 = per passage')
+    p.add_argument('--build-max-tokens', type=int, default=6000)
+    p.add_argument('--workers', type=int, default=1, help='concurrent build calls; results stay deterministic')
     p.add_argument('--out', type=Path, default=Path('outputs/session'))
     a = p.parse_args()
     api = API(dict(base_url=a.base_url, model=a.model, api_key=os.environ.get('NOVEL_API_KEY', '')))
     a.out.mkdir(parents=True, exist_ok=True)
     def emit(kind, **data):
         print(data.get('label', kind), flush=True)
+    wide = dict(pass1_group=a.pass1_group, pass2_chars=a.pass2_chars, max_tokens=a.build_max_tokens, workers=a.workers)
     if a.novel:
-        graph = build(a.novel.read_text(a.encoding), a.novel.stem, api, a.out/'cache', emit, size=a.chunk_size)
+        graph = build(a.novel.read_text(a.encoding), a.novel.stem, api, a.out/'cache', emit, size=a.chunk_size, wide=wide)
     else:
         data = json.loads(a.graph.read_text('utf-8-sig'))
         graph = data.get('graph', data)

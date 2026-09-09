@@ -7,13 +7,17 @@
 主要文件：
 
 - `core.py`：API、分块、BM25 与新内核入口。
-- `kernel_build.py` / `research_prompts.py`：双遍关系优先建图、人物归并与质量报告。
+- `kernel_build.py` / `research_prompts.py`：双遍关系优先建图、人物归并与质量报告；`wide` 参数（pass1_group/pass2_chars/max_tokens）为约 1M token 的大上下文模型合并调用。
 - `kernel_retrieve.py`：AGM-S/R/D、BGE-M3 接口、逐节点工具导航和引用验证。
 - `server.py`：仅本机访问、后台任务、阶段事件和停止标记。
 - `web/app.js`：Canvas 三维投影、事件驱动光点、证据面板、离线导出。
 - `tools/extract_demo.py`：从原附件静态 JSON 提取，不运行附件 JS。
+- `tools/run_demo.py`：公开 Demo 复现脚本，支持 `--source/--questions/--pass1-group/--pass2-chars`。
 - `cli.py`：批处理，密钥只读环境变量，先保存图谱再生成回答。
+
+逐字校验规则：引文与原文的词序和内容必须完全一致；模型把换行折叠为空格时按空白串不敏感命中，但入库引文一律替换为原文精确切片并记录字符偏移。
 
 模型请求使用 Chat Completions JSON 内容协议。用户指定的服务须支持 `messages`、`model`、`max_tokens`，并遵循 JSON 输出指令；如果接口错误、输出截断或格式无效，保留缓存并报告实际错误，不以模拟结果替代。
 
-项目定位不是自动授权修改任意旧研究工程。默认在独立项目或其副本中操作。缓存包含小说派生内容，输出会包含原文证据。用户未请求清理时保留这些可复用成果。
+项目定位不是自动授权修改任意旧研究工程。默认在独立项目或其副本中操作。缓存包含小说派生内容，输出会包含原文证据。用户未请求清理时保留这些可复用成果。受版权保护的小说只在本地处理，不放入公开发布物。
+

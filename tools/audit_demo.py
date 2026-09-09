@@ -9,7 +9,7 @@ from pathlib import Path
 def audit(session,source):
     graph=session['graph'];results=session['results'];ids={n['id'] for n in graph['nodes']};edges={e['id']:e for e in graph['edges']}
     assert graph['meta']['source_sha256']==hashlib.sha256(source.encode()).hexdigest()
-    assert graph['version']=='agm-port-3.0'
+    assert graph['version']=='agm-port-3.1'
     for p in graph['passages']: assert source[p['start']:p['end']]==p['text']
     for n in graph['nodes']:
         for q in n['evidence_ids']: assert source[q['start']:q['end']]==q['quote']
@@ -18,7 +18,7 @@ def audit(session,source):
         assert source[e['start']:e['end']]==e['quote']
     counts={};rows=[]
     for result in results:
-        assert result['mode']=='live' and result['kernel_version']=='agm-port-3.0'
+        assert result['mode']=='live' and result['kernel_version']=='agm-port-3.1'
         counts.setdefault(result['question'],set()).add(result['method'])
         ev={e['id']:e for e in result['evidence']}
         for e in ev.values(): assert source[e['start']:e['end']]==e['quote']

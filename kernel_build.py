@@ -2,25 +2,68 @@
 import hashlib
 import json
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from core import chunks, normalize, TYPES
-from research_prompts import PASS1_SYSTEM, PASS2_SYSTEM_V4
+from research_prompts import PASS1_SYSTEM, PASS1_WIDE, PASS2_SYSTEM_V4
 
-VERSION = 'agm-port-3.0'
+VERSION = 'agm-port-3.1'
 RELATIONS = {'located_at','appears_at','belongs_to','mentions','temporal_sequence','supports','contradicts','related_to','motive','means','opportunity','witnessed_by'}
 
 
-def cached(api, folder, phase, system, data):
+def cached(api, folder, phase, system, data, max_tokens=6000):
     signature = json.dumps([VERSION, api.fingerprint, phase, system, data], ensure_ascii=False, sort_keys=True)
     path = Path(folder)/(hashlib.sha256(signature.encode()).hexdigest()+'.json')
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         return json.loads(path.read_text('utf-8'))
-    result = api.complete(system, data)
+    result = api.complete(system, data, max_tokens)
     temp = path.with_suffix('.tmp')
     temp.write_text(json.dumps(result, ensure_ascii=False), 'utf-8')
     temp.replace(path)
     return result
+
+
+def _norm_with_positions(text):
+    out = []
+    pos = []
+    prev_space = False
+    for index, char in enumerate(text):
+        if char.isspace():
+            if prev_space:
+                continue
+            out.append(' ')
+            pos.append(index)
+            prev_space = True
+        else:
+            out.append(char)
+            pos.append(index)
+            prev_space = False
+    return ''.join(out), pos
+
+
+def locate(container, quote):
+    """Find quote inside container; exact first, then whitespace-run-insensitive.
+
+    Returns the exact container slice plus its start offset, or (None, None).
+    Models sometimes collapse newlines into spaces when copying verbatim spans;
+    the stored quote is always the exact source slice, never the model's spelling.
+    """
+    if not quote.strip():
+        return None, None
+    if quote in container:
+        start = container.index(quote)
+        return container[start:start+len(quote)], start
+    norm_text, pos = _norm_with_positions(container)
+    norm_quote, _ = _norm_with_positions(quote)
+    if not norm_quote.strip():
+        return None, None
+    at = norm_text.find(norm_quote)
+    if at < 0:
+        return None, None
+    start = pos[at]
+    end = pos[at+len(norm_quote)-1]+1
+    return container[start:end], start
 
 
 def quality(graph):
@@ -83,29 +126,86 @@ def consolidate(graph, api, cache_dir, emit):
     emit('build',label='人物别名归并',detail=f'{len(mapping)} 个有证据的名称变体已合并')
 
 
-def build(text,title,api,cache_dir,emit=lambda *a,**k:None,cancelled=lambda:False,size=1500):
+def build(text,title,api,cache_dir,emit=lambda *a,**k:None,cancelled=lambda:False,size=1500,wide=None):
     if not text.strip(): raise ValueError('小说内容为空。')
+    # wide: large-context batching for ~1M-token models. pass1_group passages share one
+    # selection call; pass2_chars characters of verified spans share one extraction call;
+    # workers fetches independent calls concurrently (results processed in fixed order).
+    wide=dict(wide or {})
+    group=max(1,int(wide.get('pass1_group',1)))
+    batch_chars=max(0,int(wide.get('pass2_chars',0)))
+    out_tokens=max(6000,int(wide.get('max_tokens',6000)))
+    workers=max(1,int(wide.get('workers',1)))
     source=chunks(text,size,min(100,size//8))
     nodes=[]; edges=[]; names={}; markers=set(); kept_all=[]
     rejected=0; bad_rel=0
-    for index,p in enumerate(source):
-        if cancelled(): raise ValueError('任务已停止；已完成的双遍建图缓存可复用。')
-        emit('build',label=f'证据筛选 {index+1}/{len(source)}',done=index,total=len(source),detail='第一遍逐字筛选情节证据；完整原文仍保留')
-        selected=cached(api,cache_dir,'pass1',PASS1_SYSTEM,{'text':p['text']})
-        kept=[]
-        for item in selected.get('kept',[]):
+    windows=[source[i:i+group] for i in range(0,len(source),group)]
+    def fetch_pass1(window):
+        if group==1:
+            return cached(api,cache_dir,'pass1',PASS1_SYSTEM,{'text':window[0]['text']})
+        return cached(api,cache_dir,'pass1-wide',PASS1_WIDE,
+            {'segments':[{'id':p['id'],'text':p['text']} for p in window]},out_tokens)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures=[]
+        for window in windows:
+            if cancelled(): raise ValueError('任务已停止；已完成的双遍建图缓存可复用。')
+            futures.append(pool.submit(fetch_pass1,window))
+        selections=[]
+        for wi,future in enumerate(futures):
+            window=windows[wi]
+            detail='第一遍逐字筛选情节证据；完整原文仍保留' if group==1 else f'大上下文批量：一次筛选 {len(window)} 个分块；完整原文仍保留'
+            if workers>1: detail+=f'（{workers} 路并发）'
+            emit('build',label=f'证据筛选 {wi+1}/{len(windows)}',done=wi,total=len(windows),detail=detail)
+            selections.append(future.result())
+    for wi,window in enumerate(windows):
+        selected=selections[wi]
+        if group==1:
+            proposals=[(None,item) for item in selected.get('kept',[])]
+        else:
+            by_seg={p['id']:p for p in window}
+            proposals=[(by_seg.get(str(item.get('segment_id',''))),item) for item in selected.get('kept',[])]
+        kept_by_id={}
+        for seg,item in proposals:
             quote=str(item.get('text',''))
-            if quote.strip() and quote in p['text']:
-                kept.append(dict(text=quote,time_label=item.get('time_label','unknown'),start=p['start']+p['text'].index(quote),passage_id=p['id']))
-            else: rejected+=1
+            search=([seg] if seg else [])+[p for p in window if p is not seg]
+            located=None
+            for p in search:
+                exact,offset=locate(p['text'],quote)
+                if exact is not None:
+                    located=(p,exact,offset); break
+            if located is None: rejected+=1; continue
+            hit,exact,offset=located
+            kept_by_id.setdefault(hit['id'],[]).append(dict(text=exact,time_label=item.get('time_label','unknown'),start=hit['start']+offset,passage_id=hit['id']))
         # Unparseable/empty selection is explicit: no silent filtering of the book.
-        if not kept:
-            kept=[dict(text=p['text'],time_label='unknown',start=p['start'],passage_id=p['id'])]
-            p['selection_fallback']='full_chunk'
-        kept_all+=kept
-        if cancelled(): raise ValueError('任务已停止。')
-        emit('build',label=f'关系优先建图 {index+1}/{len(source)}',done=index,total=len(source),detail=f'{len(kept)} 段已校验证据 → v4 实体与关系')
-        raw=cached(api,cache_dir,'pass2-v4',PASS2_SYSTEM_V4,{'lines':'\n'.join(f'[{i}] {k["text"]}' for i,k in enumerate(kept))})
+        for p in window:
+            if not kept_by_id.get(p['id']):
+                kept_by_id[p['id']]=[dict(text=p['text'],time_label='unknown',start=p['start'],passage_id=p['id'])]
+                p['selection_fallback']='full_chunk'
+            kept_all+=kept_by_id[p['id']]
+    if batch_chars:
+        batches=[]; current=[]; used=0
+        for k in kept_all:
+            if current and used+len(k['text'])>batch_chars:
+                batches.append(current); current=[]; used=0
+            current.append(k); used+=len(k['text'])
+        if current: batches.append(current)
+    else:
+        by_passage={}
+        for k in kept_all: by_passage.setdefault(k['passage_id'],[]).append(k)
+        batches=[by_passage[p['id']] for p in source if by_passage.get(p['id'])]
+    def fetch_pass2(kept):
+        return cached(api,cache_dir,'pass2-v4',PASS2_SYSTEM_V4,{'lines':'\n'.join(f'[{i}] {k["text"]}' for i,k in enumerate(kept))},out_tokens)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures=[]
+        for kept in batches:
+            if cancelled(): raise ValueError('任务已停止。')
+            futures.append(pool.submit(fetch_pass2,kept))
+        extractions=[]
+        for bi,future in enumerate(futures):
+            emit('build',label=f'关系优先建图 {bi+1}/{len(batches)}',done=bi,total=len(batches),detail=f'{len(batches[bi])} 段已校验证据 → v4 实体与关系')
+            extractions.append(future.result())
+    for bi,kept in enumerate(batches):
+        raw=extractions[bi]
         if not isinstance(raw.get('entities'),list) or not isinstance(raw.get('relations'),list):
             raise ValueError('关系抽取缺少 entities / relations，请重试。')
         def ground(item,field):
@@ -115,9 +215,11 @@ def build(text,title,api,cache_dir,emit=lambda *a,**k:None,cancelled=lambda:Fals
                 k=kept[line_index]
             except (KeyError,ValueError,TypeError,IndexError): return None
             quote=str(item.get(field,''))
-            if not quote.strip() or quote not in k['text'] or len(quote)>400: return None
-            start=k['start']+k['text'].index(quote)
-            return dict(passage_id=p['id'],quote=quote,start=start,end=start+len(quote))
+            if not quote.strip() or len(quote)>400: return None
+            exact,offset=locate(k['text'],quote)
+            if exact is None: return None
+            start=k['start']+offset
+            return dict(passage_id=k['passage_id'],quote=exact,start=start,end=start+len(exact))
         local={}
         for item in raw['entities']:
             if not isinstance(item,dict): continue
@@ -149,6 +251,7 @@ def build(text,title,api,cache_dir,emit=lambda *a,**k:None,cancelled=lambda:Fals
     graph=dict(version=VERSION,title=title,nodes=nodes,edges=edges,passages=source,evidence_spans=kept_all,
         meta=dict(mode='live',characters=len(text),source_sha256=hashlib.sha256(text.encode()).hexdigest(),model=api.model,
                   builder='pass1-verbatim + pass2-v4-relation-centered + guarded-person-consolidation',
+                  wide=None if group==1 and not batch_chars else dict(pass1_group=group,pass2_chars=batch_chars,max_tokens=out_tokens,workers=workers),
                   rejected_quotes=rejected,rejected_relations=bad_rel,kept_spans=len(kept_all),chunks=len(source),chunk_size=size,overlap=min(100,size//8)))
     if cancelled(): raise ValueError('任务已停止。')
     consolidate(graph,api,cache_dir,emit)

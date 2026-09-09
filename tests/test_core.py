@@ -14,7 +14,7 @@ class FakeAPI:
     model = 'fixture'
     def __init__(self):
         self.usage = {'calls': 0, 'total_tokens': 0}
-    def complete(self, system, data):
+    def complete(self, system, data, max_tokens=6000):
         self.usage['calls'] += 1
         if 'condensation editor' in system:
             return {'kept':[{'text':TEXT,'time_label':'unknown'}]}

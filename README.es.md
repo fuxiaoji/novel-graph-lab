@@ -10,9 +10,9 @@ Convierte novelas largas en grafos de conocimiento reutilizables, consulta el te
 
 ## Prueba la demo
 
-La versión online no requiere cuenta ni clave de API, e incluye la demo de investigación original: **739 nodos, 1.886 aristas y 7 preguntas guardadas**.
+La versión online no requiere cuenta ni clave de API, e incluye el grafo recién construido de la novela completa de dominio público *The Moonstone* (1,07 M de caracteres): **427 nodos, 1.460 aristas** y **12 respuestas reales de GLM-5.3 (3 preguntas × 4 métodos)**.
 
-- Primero se muestra el grafo completo de fuerzas dirigidas, incluidos **92 nodos aislados (12,4 %)**.
+- Primero se muestra el grafo completo de fuerzas dirigidas (tasa de nodos aislados 0,7 %).
 - Arrastra para rotar, usa la rueda para hacer zoom y haz clic en un nodo para ver su evidencia y relaciones.
 - Selecciona una pregunta y reproduce la animación de recuperación: pausa, paso a paso, cambio de velocidad y línea de tiempo arrastrable.
 - Por defecto se resalta la recuperación sobre el grafo completo; el subgrafo de la pregunta solo se activa si lo marcas explícitamente.

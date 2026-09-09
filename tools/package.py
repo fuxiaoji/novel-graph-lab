@@ -20,6 +20,8 @@ def sources():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--update-installed', action='store_true')
+    parser.add_argument('--install-dir', type=Path, default=Path.home()/'.codex/skills',
+                        help='agent skill directory; the skill lands in <install-dir>/novel-graph-lab')
     args = parser.parse_args()
     skill = ROOT/'skill/novel-graph-lab'
     assets = skill/'assets/project'
@@ -27,7 +29,7 @@ if __name__ == '__main__':
         target = assets/src.relative_to(ROOT)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, target)
-    installed = Path.home()/'.codex/skills/novel-graph-lab'
+    installed = args.install_dir/'novel-graph-lab'
     if installed.exists() and not args.update_installed:
         raise SystemExit(f'Existing skill preserved: {installed}. Update explicitly if intended.')
     shutil.copytree(skill, installed, dirs_exist_ok=args.update_installed)

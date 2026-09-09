@@ -1,0 +1,51 @@
+{
+  "kernel_version": "agm-port-3.1",
+  "kernel_sha256": "5074bb07397c3607aec976e1f8cdf38fc46dc400db77678ed3c974e9fdba85bb",
+  "source_sha256": "3b01fb5c9101d304fa7d4662f36257245a7dce56bd80e297d9450a33f04c985e",
+  "source_url": "https://www.gutenberg.org/ebooks/155",
+  "story": "The Moonstone",
+  "author": "Wilkie Collins",
+  "source_characters": 1073378,
+  "scope": "complete full-length public-domain novel (1868), about 25x the previous short-story demo; exploratory functional run, not a benchmark",
+  "model": "glm-5.3",
+  "methods": [
+    "agm_s",
+    "agm_r",
+    "agm_d",
+    "walk"
+  ],
+  "questions": [
+    "Who took the Moonstone out of Rachel Verinder's sitting-room on the night it disappeared, and what evidence finally proves how it was taken?",
+    "How did the Moonstone travel from the Verinder house into Godfrey Ablewhite's hands and then to Mr. Luker in London?",
+    "Why did Rosanna Spearman hide a tin box in the Shivering Sand, and what did it contain?"
+  ],
+  "result_count": 12,
+  "build_usage": {
+    "calls": 109,
+    "total_tokens": 810373
+  },
+  "answer_usage": {
+    "calls": 47,
+    "total_tokens": 142544
+  },
+  "graph_quality": {
+    "nodes": 427,
+    "edges": 1460,
+    "isolates": 3,
+    "isolate_rate": 0.00702576112412178,
+    "edge_node_ratio": 3.4192037470725993,
+    "dropped_relation_rate": 0.04262295081967213,
+    "passed": true,
+    "thresholds": {
+      "max_isolate_rate": 0.6,
+      "min_edge_node_ratio": 0.5,
+      "max_dropped_relation_rate": 0.55
+    }
+  },
+  "build_batching": {
+    "pass1_group": 24,
+    "pass2_chars": 6000,
+    "max_tokens": 16000
+  },
+  "generated_at": "2026-09-09T11:20:28+0800"
+}
