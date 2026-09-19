@@ -97,3 +97,18 @@ v0.2 阅读界面更新：冷白底与墨蓝控件、原文阅读排版、统计
 - 用户反馈：左下角基线柱组被字幕条挡住（柱标签 RAG/Compr./Tail/Q0 不可见，且"EVERY BASELINE TRAILS"与 51.7 数值重叠）。
 - 修正：立方体两行上移（214 / 320），基线柱组整体上移至基线 y=556、柱高上限 150px，组标题移至 y=366，右侧说明文字移至 400/436/468——全部落在字幕条（y>=610）之上，互不遮挡。
 - 已重渲染并核对成片该帧（t=205s）无误。
+
+## 2026-09-19 剪映 MCP 安装 + 真实录屏预告片
+
+- **剪映 MCP 安装**：官方 marketplace 无剪映插件，改装社区方案 `jianying-ai-mcp`（验证基线 剪映专业版 10.0.5.13816）：
+  - 仓库：`D:/desktop/coding/科研/mcp/jianying-ai-mcp`，`uv venv --python 3.12` + `pip install -e .`（依赖 mcp + pyJianYingDraft）
+  - 注册到 ZCode：`~/.zcode/cli/config.json` → `mcp.servers.jianying-ai-editor`（stdio，含 JIANYING_DRAFT_ROOT / JIANYING_EXE / 工作目录）
+  - Skill 安装到 `~/.zcode/skills/jianying-ai-editor`（来自仓库 `skills/`）
+  - stdio 冒烟测试通过，8 个工具可用：`get_jianying_capabilities`、`build_draft`、`build_from_reference`、`batch_from_template`、`analyze_reference_draft`、`analyze_video_source`、`save_video_observations`、`get_video_analysis_context`
+- **真实素材录制（沙盒）**：宿主 IAB 的 `recording` 能力未开放、且后台节流 rAF（`S.frame=0`），改为**手动驱动渲染 + 逐帧抓 canvas**（`frame(t)` 合成时钟 + `toDataURL`），得到 5 段真实渲染素材（rotate/replay/walk/focus/gold，共 750 帧 @30fps）+ 5 张 1920×1080 全页 UI 截图（demo 首页、回答+引用、金标命中、节点详情、问题页）。
+- **100 秒预告片**（按用户提供的脚本与视觉规范：深色 #0A0C0F + 琥珀 #F2B544，每 3–5 秒一次视觉事件，真实录屏主导）：
+  - 12 幕：钩子 → 项目名 → 线索分散问题 → 数据规模（count-up：107 万字符 / 427 节点 / 1,460 边）→ 交互系统 → 提问 → 路径追踪（核心）→ 原文证据可追溯 → 四种策略卡 → 批处理 ~760→109 → CTA → 片尾
+  - 音频：12 段英文旁白（Kokoro，硬隔离断言全部通过）+ 原创深色氛围乐 + 界面音效（pop/whoosh/tick，闪避混音）
+  - 成片：`novel-graph-lab-trailer.mp4`（101s，1920×1080，AAC）、女声版、无声版、30 秒短版（男/女声）
+  - 验证：成片音轨与混音相关性 1.0000；12 段旁白逐段相关性最差 0.9999；抽帧核对 6 个关键点
+- **剪映可编辑草稿**：通过 MCP `build_draft` 生成 `NovelGraphLab_Trailer_100s`（video 12 段 + audio 1 轨 + text 12 条字幕，1920×1080/30fps，duration 101s），先 dry_run 校验再发布，路径在剪映草稿目录下，可直接在剪映中微调导出。
