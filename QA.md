@@ -120,3 +120,9 @@ v0.2 阅读界面更新：冷白底与墨蓝控件、原文阅读排版、统计
 - **音画验证**：整片 5 个采样点（开篇 0-20s / 25-32s、长片拼接后 0-20s / 100-120s / 200-217s）与源音轨相关性均为 **1.0000**；拼接处逐秒 RMS 无空隙。
 - **修正编码黑边**：`imageio_ffmpeg.write_frames` 默认 `macro_block_size=16`，把 1920×1080 补成 **1920×1088**（预告片与开篇都受影响）。已在两个渲染脚本显式设 `macro_block_size=1` 并重渲染；现预告片/短版均为标准 1920×1080。
 - **剪映草稿更新**：`NovelGraphLab_Full_4m09s`（开篇 5 幕 + 长片 17 段 = 22 视频片段，1 轨配音 full_audio.wav，17 条中文字幕，250s/1920×1080）。旧的 `NovelGraphLab_Trailer_100s` 保留。
+
+### 补记：开篇字形修正与剪映草稿校正
+
+- 开篇 skill 卡片文案由 `novel → evidence mind map` 改为 `one novel, one evidence mind map`（Georgia 字体缺 → 字形，会渲染成方框）；已重渲染该幕并重出整片。
+- 剪映草稿修正：初版误把 100 秒预告片当作长片主体（133s 视频 vs 250s 音频）。改为「开篇 5 段 + 长片按场景切分的 17 段（source_start 指向长片文件）」= 22 个可剪辑片段 + 精确 249.5s 配音轨；去掉了重复的字幕轨（字幕已烧录在画面中）。草稿 `NovelGraphLab_Full_4m09s` 已重新发布，旧 `NovelGraphLab_Trailer_100s` 保留。
+- 交付：release 现含整片 `novel-graph-lab-full.mp4`（4:09.47，1280×720@60）+ 预告片 5 版（1920×1080）+ 长片 3 版。
