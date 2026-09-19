@@ -126,3 +126,10 @@ v0.2 阅读界面更新：冷白底与墨蓝控件、原文阅读排版、统计
 - 开篇 skill 卡片文案由 `novel → evidence mind map` 改为 `one novel, one evidence mind map`（Georgia 字体缺 → 字形，会渲染成方框）；已重渲染该幕并重出整片。
 - 剪映草稿修正：初版误把 100 秒预告片当作长片主体（133s 视频 vs 250s 音频）。改为「开篇 5 段 + 长片按场景切分的 17 段（source_start 指向长片文件）」= 22 个可剪辑片段 + 精确 249.5s 配音轨；去掉了重复的字幕轨（字幕已烧录在画面中）。草稿 `NovelGraphLab_Full_4m09s` 已重新发布，旧 `NovelGraphLab_Trailer_100s` 保留。
 - 交付：release 现含整片 `novel-graph-lab-full.mp4`（4:09.47，1280×720@60）+ 预告片 5 版（1920×1080）+ 长片 3 版。
+
+### 补记：女声版整片
+
+- 整片此前只有男声（开篇音频用 bm_george 生成）。已补 `novel-graph-lab-full-female.mp4`：女声开篇（af_heart）+ 女声长片音轨（final_mix_heart.wav）拼接而成。
+- 验证：整片 5 个采样点与源音轨相关性 0.9998-0.9999，时长 4:09.47，1280×720@60。
+- 剪映草稿同步新增女声版 `NovelGraphLab_Full_4m09s_female`（22 片段 + 女声配音轨），与男声草稿并存，可直接对拍。
+- 至此 release 上每支视频均为男/女双声版：整片 ×2、长片 ×2（+无声）、预告片 ×2（+无声）、30 秒短版 ×2。
